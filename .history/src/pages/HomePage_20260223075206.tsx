@@ -164,7 +164,7 @@ export default function HomePage() {
         {/* Customer Analysis */}
         <div className="rounded-2xl border bg-card p-6">
           <h3 className="mb-4 font-bold text-card-foreground">Customer Analysis</h3>
-          <div className="mb-6 flex flex-wrap gap-2">
+          <div className="mb-6 flex gap-2">
             {starDistribution.map((count, i) => (
               <div key={i} className="flex flex-1 flex-col items-center rounded-lg border p-2">
                 <span className="text-sm font-bold">{count}</span>

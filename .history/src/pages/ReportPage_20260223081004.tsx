@@ -122,11 +122,11 @@ export default function ReportPage() {
   return (
     <div className="space-y-6">
       {/* Top bar */}
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <div className="flex flex-1 sm:flex-none items-center gap-2 rounded-lg border bg-card px-3 py-2">
+      <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2">
           <Search size={16} className="text-muted-foreground" />
           <input
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             placeholder="Search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

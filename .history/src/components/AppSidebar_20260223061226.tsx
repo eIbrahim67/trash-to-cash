@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, FileText, Users, Star, ArrowLeftRight, Layers, LogOut, X } from "lucide-react";
+import { Home, FileText, Users, Star, ArrowLeftRight, Layers, LogOut } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
@@ -13,34 +13,20 @@ const navItems = [
   { to: "/materials", label: "Materials", icon: Layers },
 ];
 
-interface AppSidebarProps {
-  onClose?: () => void;
-}
-
-export default function AppSidebar({ onClose }: AppSidebarProps) {
+export default function AppSidebar() {
   const location = useLocation();
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
       toast.success("Signed out successfully");
-      onClose?.();
     } catch (error: any) {
       toast.error("Failed to sign out");
     }
   };
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col rounded-2xl bg-card p-5 shadow-sm md:w-56 md:h-auto">
-      {/* Close button – mobile only */}
-      <button
-        onClick={onClose}
-        className="mb-2 self-end rounded-lg p-1 text-muted-foreground hover:bg-muted md:hidden"
-        aria-label="Close menu"
-      >
-        <X size={20} />
-      </button>
-
+    <aside className="flex w-56 shrink-0 flex-col rounded-2xl bg-card p-5 shadow-sm">
       {/* Logo */}
       <div className="mb-6 flex items-center gap-2">
         <span className="text-3xl">♻️</span>
@@ -60,10 +46,9 @@ export default function AppSidebar({ onClose }: AppSidebarProps) {
             <NavLink
               key={to}
               to={to}
-              onClick={onClose}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${isActive
-                ? "bg-primary text-primary-foreground"
-                : "text-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
             >
               <Icon size={20} />

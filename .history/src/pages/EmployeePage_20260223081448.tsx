@@ -106,10 +106,10 @@ export default function EmployeePage() {
         <Button onClick={openAdd} className="gap-1"><Plus size={16} /> Add</Button>
         <Button variant="outline" onClick={openEdit} disabled={selected.size !== 1} className="gap-1 border-primary text-primary"><Pencil size={16} /> Edit</Button>
         <Button variant="destructive" onClick={handleDelete} disabled={selected.size === 0} className="gap-1"><Trash2 size={16} /> Delete</Button>
-        <div className="flex flex-1 sm:flex-none sm:ml-auto items-center gap-3">
-          <div className="flex flex-1 sm:flex-none items-center gap-2 rounded-lg border bg-card px-3 py-2">
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2">
             <Search size={16} className="text-muted-foreground" />
-            <input className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" placeholder="Search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input className="bg-transparent text-sm outline-none placeholder:text-muted-foreground" placeholder="Search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <div className="relative">
             <button

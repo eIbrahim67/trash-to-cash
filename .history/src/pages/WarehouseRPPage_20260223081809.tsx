@@ -1,27 +1,26 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, Timestamp } from "firebase/firestore";
+import { collection, getDocs, Timestamp, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { ReportStats, RecyclingProcess } from "@/types";
-import { RecyclingStatus } from "@/types";
+import { RecyclingProcess, RecyclingStatus } from "@/types";
 import StatusBadge from "@/components/StatusBadge";
-import { Search, Filter, Download } from "lucide-react";
+import { Search, Filter, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export default function ReportPage() {
-  const [stats, setStats] = useState<ReportStats | null>(null);
+export default function WarehouseRPPage() {
+  const navigate = useNavigate();
   const [processes, setProcesses] = useState<RecyclingProcess[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "done" | "pending" | "error">("all");
-  const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchTransactions = async () => {
       try {
         const transactionsRef = collection(db, "recycle_transactions");
+        // Remove orderBy to prevent empty results if index is missing or field is missing in some docs
         const querySnapshot = await getDocs(transactionsRef);
 
-        let errorCount = 0;
         const data: any[] = querySnapshot.docs.map(doc => {
           const docData = doc.data();
+          // Use scannedAt as the primary timestamp field
           const timestamp = (docData.scannedAt || docData.timestamp || docData.createdAt) as Timestamp;
           const items = docData.items || [];
 
@@ -39,15 +38,12 @@ export default function ReportPage() {
             });
           }
 
+          const dateObj = timestamp && typeof timestamp.toDate === 'function' ? timestamp.toDate() : null;
+
           const glassPoints = glass * 2;
           const plasticPoints = plastic * 3;
           const cansPoints = cans * 5;
           const calculatedPoints = glassPoints + plasticPoints + cansPoints;
-
-          const status = docData.status ?? RecyclingStatus.Done;
-          if (status === RecyclingStatus.Error) errorCount++;
-
-          const dateObj = timestamp && typeof timestamp.toDate === 'function' ? timestamp.toDate() : null;
 
           return {
             id: doc.id,
@@ -59,30 +55,25 @@ export default function ReportPage() {
             points: calculatedPoints || docData.points || 0,
             date: dateObj ? dateObj.toLocaleDateString() : "N/A",
             time: dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A",
-            status: status,
-            _timestamp: dateObj ? dateObj.getTime() : 0
+            status: docData.status ?? RecyclingStatus.Done,
+            _timestamp: dateObj ? dateObj.getTime() : 0 // Internal field for sorting
           };
         });
 
-        // Sort by timestamp newest first
-        const sortedData = [...data].sort((a: any, b: any) => b._timestamp - a._timestamp);
-        setProcesses(sortedData);
+        // Sort in memory (newest first)
+        data.sort((a: any, b: any) => b._timestamp - a._timestamp);
 
-        // Calculate Stats
-        const totalCount = sortedData.length;
-        setStats({
-          recyclingProcessErrors: errorCount,
-          totalRecyclingProcess: totalCount,
-          totalWithoutErrors: totalCount - errorCount
-        });
-
+        setProcesses(data);
       } catch (error) {
-        console.error("Error fetching report data from Firestore:", error);
+        console.error("Error fetching recycle transactions:", error);
       }
     };
 
-    fetchReports();
+    fetchTransactions();
   }, []);
+
+  const [filterStatus, setFilterStatus] = useState<"all" | "done" | "pending" | "error">("all");
+  const [showFilter, setShowFilter] = useState(false);
 
   const statusFilterMap: Record<string, RecyclingStatus | null> = {
     all: null,
@@ -92,45 +83,19 @@ export default function ReportPage() {
   };
 
   const filtered = processes.filter((p) => {
-    const matchesSearch = p.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = Object.values(p).some((v) => String(v).toLowerCase().includes(searchTerm.toLowerCase()));
     const statusFilter = statusFilterMap[filterStatus];
     const matchesStatus = statusFilter === null || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const exportToCSV = () => {
-    const headers = ["ID", "Employee ID", "User ID", "Glass", "Plastic", "Cans", "Points", "Date", "Time", "Status"];
-    const statusLabel = (s: RecyclingStatus) =>
-      s === RecyclingStatus.Done ? "Done" : s === RecyclingStatus.Pending ? "Pending" : "Error";
-    const rows = filtered.map((p) => [
-      p.id, p.employeeId, p.userId,
-      p.amountGlass, p.amountPlastic, p.amountCans,
-      p.points, p.date, p.time, statusLabel(p.status),
-    ]);
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `report-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  if (!stats) return <div className="p-8 text-muted-foreground">Loading...</div>;
-
   return (
     <div className="space-y-6">
       {/* Top bar */}
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <div className="flex flex-1 sm:flex-none items-center gap-2 rounded-lg border bg-card px-3 py-2">
+      <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2">
           <Search size={16} className="text-muted-foreground" />
-          <input
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <input className="bg-transparent text-sm outline-none placeholder:text-muted-foreground" placeholder="Search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
         <div className="relative">
           <button
@@ -159,26 +124,7 @@ export default function ReportPage() {
             </div>
           )}
         </div>
-        <button
-          onClick={exportToCSV}
-          className="flex items-center gap-1 rounded-lg border bg-card px-3 py-2 text-sm font-medium text-card-foreground hover:bg-muted"
-        >
-          <Download size={14} /> Export CSV
-        </button>
-      </div>
-
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {[
-          { label: "Recycling Process\nErrors", value: stats.recyclingProcessErrors, color: "text-destructive" },
-          { label: "Total Recycling\nProcess", value: stats.totalRecyclingProcess, color: "text-primary" },
-          { label: "Total Recycling\nProcess without errors", value: stats.totalWithoutErrors, color: "text-primary" },
-        ].map((card) => (
-          <div key={card.label} className="rounded-2xl border bg-card p-6 text-center">
-            <p className="whitespace-pre-line text-sm font-bold text-card-foreground">{card.label}</p>
-            <p className={`mt-1 text-2xl font-bold ${card.color}`}>{card.value}</p>
-          </div>
-        ))}
+        <button onClick={() => navigate("/profile")} className="rounded-full border p-2 text-muted-foreground hover:bg-muted transition-colors"><User size={18} /></button>
       </div>
 
       {/* Table */}
